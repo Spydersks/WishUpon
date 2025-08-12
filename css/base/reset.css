@@ -1,0 +1,33 @@
+
+/* A more robust CSS Reset */
+*, *::before, *::after { 
+    box-sizing: border-box; 
+}
+
+html { 
+    -webkit-text-size-adjust: 100%;
+}
+
+body, h1, h2, h3, h4, p, ul, li, figure, figcaption, blockquote, dl, dd { 
+    margin: 0; 
+    padding: 0; 
+}
+
+ul[role='list'],
+ol[role='list'] {
+  list-style: none;
+}
+
+a { 
+    text-decoration: none; 
+    color: inherit; 
+}
+
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+}
+
+input, button, textarea, select {
+  font: inherit;
+}

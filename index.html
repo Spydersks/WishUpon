@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WishUpon</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="manifest" href="site.webmanifest">
+    <link rel="icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    
+    <!-- Page-specific styles -->
+    <link rel="stylesheet" href="css/pages/home.css">
+    <link rel="stylesheet" href="css/pages/people.css">
+    <link rel="stylesheet" href="css/pages/profile.css">
+    <link rel="stylesheet" href="css/pages/admin.css">
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body class="bg-background text-foreground">
+    <audio id="audio-player" class="hidden"></audio>
+    <div id="app" class="container mx-auto px-4">
+        <!-- App content will be injected here -->
+        <div id="loading-spinner" class="flex items-center justify-center h-screen">
+            <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        </div>
+    </div>
+
+    <div id="floating-nav-container">
+        <!-- Floating navigation will be injected here -->
+    </div>
+
+    <div id="toast-container" class="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]">
+        <!-- Toasts will be injected here -->
+    </div>
+    
+    <script src="js/firebase-config.js"></script>
+    
+    <!-- Core App & UI Modules -->
+    <script src="js/app/api.js"></script>
+    <script src="js/ui/core.js"></script>
+    <script src="js/ui/components.js"></script>
+    <script src="js/ui/home-components.js"></script>
+    <script src="js/ui/notifications.js"></script>
+
+    <!-- Page-specific Scripts -->
+    <script src="js/pages/home.js"></script>
+    <script src="js/pages/people.js"></script>
+    <script src="js/pages/add-person.js"></script>
+    <script src="js/pages/profile.js"></script>
+    <script src="js/pages/admin.js"></script>
+    
+    <!-- Main Router/Initializer -->
+    <script src="js/app/main.js"></script>
+</body>
+</html>

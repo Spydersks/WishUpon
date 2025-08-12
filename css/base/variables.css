@@ -1,0 +1,48 @@
+
+:root {
+    --background: 210 40% 98%; 
+    --foreground: 224 71% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+    --primary-hsl: 207 82% 80%;
+    --primary: hsl(var(--primary-hsl));
+    --primary-foreground: hsl(224 71% 10%);
+    --secondary: hsl(210 40% 96.1%);
+    --secondary-foreground: hsl(222.2 47.4% 11.2%);
+    --muted: hsl(210 40% 96.1%);
+    --muted-foreground: hsl(215.4 16.3% 46.9%);
+    --accent-hsl: 0 72% 71%;
+    --accent: hsl(var(--accent-hsl));
+    --accent-foreground: hsl(210 40% 98%);
+    --destructive: hsl(0 84.2% 60.2%);
+    --destructive-foreground: hsl(210 40% 98%);
+    --border: hsl(214.3 31.8% 91.4%);
+    --input: hsl(214.3 31.8% 91.4%);
+    --ring: hsl(207 82% 80%);
+    --radius: 0.5rem;
+}
+
+@keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes pulse { 50% { opacity: .5; } }
+@keyframes confetti-fall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+@keyframes bounce { 
+    0%, 100% { transform: translateY(-25%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); } 
+    50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); } 
+}
+@keyframes fade-in {
+    from { opacity: 0; } to { opacity: 1; }
+}
+@keyframes fade-out {
+    from { opacity: 1; } to { opacity: 0; }
+}
+@keyframes slide-in-from-top {
+    from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; }
+}
+@keyframes slide-out-to-top {
+    from { transform: translateY(0); opacity: 1; } to { transform: translateY(-20px); opacity: 0; }
+}
