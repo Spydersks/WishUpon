@@ -2,21 +2,23 @@
 const App = (() => {
     
     const init = async () => {
-        // Show spinner immediately
         const appContainer = document.getElementById('app');
+        // Ensure the spinner is shown immediately while the app initializes
         if (appContainer) {
             appContainer.innerHTML = UIComponents.getSpinnerHTML();
         }
-        
-        // Wait a moment for any async data loading from API if needed
-        await new Promise(resolve => setTimeout(resolve, 50)); 
 
-        // Now, perform navigation
+        // The core issue was here. The app was navigating before the API 
+        // had initialized and loaded the profile. We must wait for the API.
+        await Api.init(); // Wait for API (and profile) to be ready
+
+        // Now that the API is initialized and profile is loaded, we can navigate.
         await navigate(window.location.hash);
         
         // Set up event listeners for future navigation
         window.addEventListener('hashchange', () => navigate(window.location.hash));
         window.addEventListener('focus', async () => {
+            // Re-check and refresh data on window focus for dynamic content updates
             const currentRoute = window.location.hash.split('?')[0];
             if (['#home', '#people', '#admin'].includes(currentRoute)) {
                 await navigate(currentRoute);
@@ -26,13 +28,12 @@ const App = (() => {
 
     const navigate = async (hash) => {
         const appContainer = document.getElementById('app');
-        // Render spinner at the start of every navigation to provide user feedback
         if(appContainer) {
+            // Show a spinner during navigation between pages for a better user experience
             appContainer.innerHTML = UIComponents.getSpinnerHTML();
+            // Allow spinner to render before proceeding
+            await new Promise(resolve => setTimeout(resolve, 50)); 
         }
-        
-        // Let the spinner render
-        await new Promise(resolve => setTimeout(resolve, 50)); 
         
         const localProfile = Api.getLocalProfile();
         const isProfileComplete = localProfile && localProfile.id && localProfile.name && localProfile.name !== "Anonymous User" && localProfile.birthday && localProfile.contact;
@@ -41,13 +42,12 @@ const App = (() => {
         const pageName = route.replace('#', '').split('/')[0];
         let needsRedirect = false;
 
-        if (route === '#profile' && isProfileComplete && pageName !== 'profile') {
-             route = '#home';
-             needsRedirect = true;
-        } else if (route === '#' || route === '') {
+        // Determine the correct route based on profile completion status
+        if (route === '#' || route === '') {
             route = isProfileComplete ? '#home' : '#profile';
             needsRedirect = true;
-        } else if (!isProfileComplete && pageName !== 'profile') {
+        } else if (!isProfileComplete && pageName !== 'profile' && pageName !== '') {
+            // If the profile is not complete, force redirect to profile page
             route = '#profile';
             needsRedirect = true;
         }
@@ -56,13 +56,14 @@ const App = (() => {
             window.history.replaceState(null, null, window.location.pathname + route);
         }
         
-        const finalPageName = route.replace('#', '').split('/')[0];
+        const finalPageName = route.replace('#', '').split('/')[0] || 'profile';
         const pageTitle = finalPageName.charAt(0).toUpperCase() + finalPageName.slice(1);
-        document.title = `WishUpon | ${pageTitle || 'Welcome'}`;
+        document.title = `WishUpon | ${pageTitle}`;
 
         // Clear the app container before rendering new page content
         if(appContainer) appContainer.innerHTML = '';
 
+        // Load the appropriate page module
         switch(finalPageName) {
             case 'home':
                 await HomePage.init();
@@ -80,11 +81,13 @@ const App = (() => {
                 await ProfilePage.init();
                 break;
             default:
+                // Fallback to the profile page if the route is unknown
                 window.history.replaceState(null, null, window.location.pathname + '#profile');
                 await ProfilePage.init();
                 break;
         }
 
+        // Render the floating navigation menu, which now correctly checks profile status
         UIComponents.renderFloatingNav();
     };
     
