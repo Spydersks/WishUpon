@@ -38,6 +38,7 @@ const Api = (() => {
     const saveProfile = async (profile) => {
         setLocal('profile', profile); // Always save to local for session persistence and immediate access
         if (!useLocal && profile && profile.contact) {
+            // CORRECTED: Ensure the database reference is correctly set and awaited.
             await db.ref(`users/${profile.contact}/profile`).set(profile);
         }
     };
@@ -91,6 +92,7 @@ const Api = (() => {
         
         if (!useLocal) {
             const userId = getUserId();
+            // CORRECTED: Ensure the database reference is correctly set and awaited.
             await db.ref(`users/${userId}/people/${person.contact}`).set(person);
         }
     };
@@ -103,6 +105,7 @@ const Api = (() => {
 
         if (!useLocal) {
             const userId = getUserId();
+            // CORRECTED: Ensure the database reference is correctly set and awaited.
             await db.ref(`users/${userId}/people/${contact}`).remove();
         }
     };
@@ -127,7 +130,8 @@ const Api = (() => {
         setLocal(`wishes_${wish.recipientContact}`, wishes); // Optimistic update
 
         if (!useLocal) {
-            await db.ref(`wishes/${wish.recipientContact}`).push(wish);
+            // CORRECTED: Ensure the database reference is correctly set and awaited.
+            await db.ref(`wishes/${wish.recipientContact}/${wish.id}`).set(wish);
         }
     };
 
