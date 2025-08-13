@@ -1,22 +1,21 @@
+
 const Api = (() => {
     let db = null;
-    let useLocal = false;
-    let localProfile = null; // Cache for local profile to reduce localStorage reads
+    let useLocal = false; // This flag will be true only if Firebase fails to initialize
 
     // Initialize Firebase and determine mode (Firebase vs. Local)
     const init = () => {
         db = initializeFirebase();
         if (!db) {
-            console.warn("API operating in Local Storage mode.");
+            console.warn("API: Firebase initialization failed. Operating in Local Storage Fallback mode.");
             useLocal = true;
         } else {
-            console.log("API operating in Firebase mode.");
+            console.log("API: Firebase initialized. Operating in Firebase-first mode.");
             useLocal = false;
         }
-        localProfile = getLocal('profile'); // Initial load of local profile
     };
 
-    // --- Helper Functions ---
+    // --- Helper Functions for Local Storage ---
     const getLocal = (key) => {
         try {
             const data = localStorage.getItem(key);
@@ -31,201 +30,196 @@ const Api = (() => {
     };
 
     const getUserId = () => {
-        const profile = getLocalProfile();
+        const profile = getLocal('profile'); // The user's own ID is always in local storage for quick access
         return profile ? profile.contact : null;
     };
 
     // ===== Profile & Auth =====
     const saveProfile = async (profile) => {
-        localProfile = profile; // Update local cache
-        setLocal('profile', profile); // Always save to local for session persistence
-        if (!useLocal) {
+        setLocal('profile', profile); // Always save to local for session persistence and immediate access
+        if (!useLocal && profile && profile.contact) {
             await db.ref(`users/${profile.contact}/profile`).set(profile);
         }
     };
     
-    // getLocalProfile is synchronous and used for immediate UI updates
+    // getLocalProfile is synchronous and used for immediate UI updates (e.g., nav header)
     const getLocalProfile = () => {
-        if (!localProfile) {
-            localProfile = getLocal('profile');
-        }
-        return localProfile;
+        return getLocal('profile');
     };
     
-    // This function can be used to sync profile from DB if needed
-    const syncProfileFromDb = async () => {
+    // This is the primary function for fetching the profile, ensuring it's synced from the DB.
+    const getProfile = async () => {
         const userId = getUserId();
-        if (useLocal || !userId) return getLocalProfile();
-        const snapshot = await db.ref(`users/${userId}/profile`).once('value');
-        const profile = snapshot.val();
-        if(profile) {
-            localProfile = profile;
-            setLocal('profile', profile);
+        if (useLocal || !userId) return getLocal('profile');
+        try {
+            const snapshot = await db.ref(`users/${userId}/profile`).once('value');
+            const profile = snapshot.val();
+            if (profile) {
+                setLocal('profile', profile); // Update local cache with fresh data
+                return profile;
+            }
+            return getLocal('profile'); // Fallback if DB has no profile for this user
+        } catch (error) {
+            console.warn("Firebase profile fetch failed, returning from local storage.", error);
+            return getLocal('profile');
         }
-        return profile;
     };
 
     const getUserRole = () => getLocal('userRole');
     const saveUserRole = (role) => setLocal('userRole', role);
 
-
     // ===== People =====
     const getPeople = async () => {
         const userId = getUserId();
         if (useLocal || !userId) return getLocal('people') || [];
-        const snapshot = await db.ref(`users/${userId}/people`).once('value');
-        return snapshot.val() ? Object.values(snapshot.val()) : [];
+        try {
+            const snapshot = await db.ref(`users/${userId}/people`).once('value');
+            const people = snapshot.val() ? Object.values(snapshot.val()) : [];
+            setLocal('people', people); // Cache fresh data
+            return people;
+        } catch (error) {
+            console.warn("Firebase getPeople failed, returning from local storage.", error);
+            return getLocal('people') || [];
+        }
     };
 
     const addPerson = async (person) => {
-        const userId = getUserId();
-        if (useLocal || !userId) {
-            const people = getLocal('people') || [];
-            people.push(person);
-            return setLocal('people', people);
+        // Optimistic update to local storage first for faster UI response
+        const people = getLocal('people') || [];
+        people.push(person);
+        setLocal('people', people);
+        
+        if (!useLocal) {
+            const userId = getUserId();
+            await db.ref(`users/${userId}/people/${person.contact}`).set(person);
         }
-        // In Firebase, we can use the person's contact as the key for easy lookup
-        await db.ref(`users/${userId}/people/${person.contact}`).set(person);
     };
 
     const deletePerson = async (id, contact) => {
-        const userId = getUserId();
-        if (useLocal || !userId) {
-            let people = getLocal('people') || [];
-            people = people.filter(p => p.id !== id);
-            return setLocal('people', people);
+        // Optimistic update
+        let people = getLocal('people') || [];
+        people = people.filter(p => p.id !== id);
+        setLocal('people', people);
+
+        if (!useLocal) {
+            const userId = getUserId();
+            await db.ref(`users/${userId}/people/${contact}`).remove();
         }
-        await db.ref(`users/${userId}/people/${contact}`).remove();
     };
 
     // ===== Wishes =====
     const getWishes = async (contact) => {
-        if (useLocal) return getLocal('birthdayWishes') || [];
-        const snapshot = await db.ref(`wishes/${contact}`).once('value');
-        return snapshot.val() ? Object.values(snapshot.val()) : [];
+        if (useLocal) return getLocal(`wishes_${contact}`) || [];
+        try {
+            const snapshot = await db.ref(`wishes/${contact}`).once('value');
+            const wishes = snapshot.val() ? Object.values(snapshot.val()) : [];
+            setLocal(`wishes_${contact}`, wishes); // Cache wishes for this contact
+            return wishes;
+        } catch(error) {
+            console.warn(`Firebase getWishes failed for ${contact}, returning from local storage.`, error);
+            return getLocal(`wishes_${contact}`) || [];
+        }
     };
 
     const addWish = async (wish) => {
-        if (useLocal) {
-            const wishes = getLocal('birthdayWishes') || [];
-            wish.id = `wish_${Date.now()}`;
-            wishes.push(wish);
-            return setLocal('birthdayWishes', wishes);
-        }
-        // Push generates a unique ID in Firebase
-        await db.ref(`wishes/${wish.recipientContact}`).push(wish);
-    };
+        const wishes = getLocal(`wishes_${wish.recipientContact}`) || [];
+        wishes.push(wish);
+        setLocal(`wishes_${wish.recipientContact}`, wishes); // Optimistic update
 
-    const markWishAsPlayed = async (wish) => {
-        // This is a client-side only state, so localStorage is fine even in Firebase mode.
-        // Or we would need a more complex data structure in Firebase (e.g., /wishes/{contact}/{wishId}/playedBy/{userId})
-        // For simplicity, we keep this local.
-        let wishes = getLocal('birthdayWishes') || [];
-        const index = wishes.findIndex(w => w.id === wish.id);
-        if (index > -1) {
-            wishes[index].played = true;
-            setLocal('birthdayWishes', wishes);
+        if (!useLocal) {
+            await db.ref(`wishes/${wish.recipientContact}`).push(wish);
         }
     };
-    
-    const _getRequestRef = (type) => {
-        const paths = {
-            nameChange: 'requests/nameChanges',
-            reRegistration: 'requests/reRegistrations'
-        };
-        return db.ref(paths[type]);
-    }
 
     // ===== Admin & Requests =====
     const saveRequest = async (type, request) => {
-        const localKey = type === 'nameChange' ? 'nameChangeRequest' : 'reRegistrationRequest';
-         if (useLocal) return setLocal(localKey, request);
-         await _getRequestRef(type).child(request.contact).set(request);
+         setLocal(`request_${type}_${request.contact}`, request); // Optimistic update
+         if (!useLocal) {
+            await db.ref(`requests/${type}/${request.contact}`).set(request);
+         }
     };
     
     const getRequest = async (type, contact) => {
-        const localKey = type === 'nameChange' ? 'nameChangeRequest' : 'reRegistrationRequest';
-        if (useLocal) return getLocal(localKey);
-        const snapshot = await _getRequestRef(type).child(contact).once('value');
-        return snapshot.val();
+        if (useLocal) return getLocal(`request_${type}_${contact}`) || null;
+        try {
+            const snapshot = await db.ref(`requests/${type}/${contact}`).once('value');
+            const request = snapshot.val();
+            setLocal(`request_${type}_${contact}`, request);
+            return request;
+        } catch(error) {
+            console.warn(`Firebase getRequest failed for ${contact}, returning local.`, error);
+            return getLocal(`request_${type}_${contact}`) || null;
+        }
     };
     
     const getAllRequests = async (type) => {
-        if (useLocal) {
-            const localKey = type === 'nameChange' ? 'nameChangeRequest' : 'reRegistrationRequest';
-            const req = getLocal(localKey);
-            return req ? { [req.contact]: req } : {};
+        if (useLocal) return getLocal(`requests_${type}`) || {};
+        try {
+            const snapshot = await db.ref(`requests/${type}`).once('value');
+            const requests = snapshot.val() || {};
+            setLocal(`requests_${type}`, requests);
+            return requests;
+        } catch(error) {
+            console.warn(`Firebase getAllRequests for ${type} failed, returning local.`, error);
+            return getLocal(`requests_${type}`) || {};
         }
-        const snapshot = await _getRequestRef(type).once('value');
-        return snapshot.val() || {};
     };
 
     const deleteRequest = async (type, contact) => {
-        if (useLocal) {
-            const localKey = type === 'nameChange' ? 'nameChangeRequest' : 'reRegistrationRequest';
-            return setLocal(localKey, null);
+        localStorage.removeItem(`request_${type}_${contact}`); // Optimistic
+        if (!useLocal) {
+            await db.ref(`requests/${type}/${contact}`).remove();
         }
-        await _getRequestRef(type).child(contact).remove();
     };
     
     const getAllUsers = async () => {
         if (useLocal) {
-            const profile = getLocalProfile();
-            const people = getLocal('people') || [];
-            return profile ? [profile, ...people] : people;
+            console.warn("Cannot get all users in local mode.");
+            return [];
         }
-        const snapshot = await db.ref('users').once('value');
-        const usersData = snapshot.val();
-        return usersData ? Object.values(usersData).map(u => u.profile) : [];
+        try {
+            const snapshot = await db.ref('users').once('value');
+            const usersData = snapshot.val();
+            if (!usersData) return [];
+            return Object.values(usersData).map(u => u.profile).filter(Boolean);
+        } catch(error) {
+            console.error("Could not fetch all users from Firebase.", error);
+            return [];
+        }
     };
     
     const updateUserName = async (contact, newName) => {
-        if (useLocal) {
-             let profile = getLocalProfile();
-             if (profile && profile.contact === contact) {
-                 profile.name = newName;
-                 saveProfile(profile);
-             }
-             return;
+        if (!useLocal) {
+            await db.ref(`users/${contact}/profile/name`).set(newName);
         }
-        await db.ref(`users/${contact}/profile/name`).set(newName);
     };
     
     const deleteUserByContact = async (contact) => {
-        if(useLocal) {
-            // In local mode, we only delete from connections, not the main profile
-             let people = getLocal('people') || [];
-             setLocal('people', people.filter(p => p.contact !== contact));
-             return;
+        if(!useLocal) {
+            await db.ref(`users/${contact}`).remove();
         }
-        await db.ref(`users/${contact}`).remove();
     };
 
-    // Admin Messages can also be moved to Firebase
     const addAdminMessage = async (message) => {
-        const recipientContact = message.recipientContact;
-        if(useLocal){
-            let messages = getLocal('adminMessages') || [];
-            message.id = `msg_${Date.now()}`;
-            messages.push(message);
-            return setLocal('adminMessages', messages);
+        if(!useLocal){
+            await db.ref(`messages/${message.recipientContact}`).push(message);
         }
-        await db.ref(`messages/${recipientContact}`).push(message);
     };
 
     const getAdminMessages = async (contact) => {
-        if(useLocal) {
-            const all = getLocal('adminMessages') || [];
-            return all.filter(m => m.recipientContact === contact);
+        if(useLocal) return [];
+        try {
+            const snapshot = await db.ref(`messages/${contact}`).once('value');
+            const messagesData = snapshot.val();
+            return messagesData ? Object.values(messagesData) : [];
+        } catch(error) {
+            console.warn("Could not get admin messages from Firebase.", error);
+            return [];
         }
-        const snapshot = await db.ref(`messages/${contact}`).once('value');
-        const messagesData = snapshot.val();
-        return messagesData ? Object.values(messagesData) : [];
     };
     
-    const markAdminMessagesAsRead = async (contact) => {
-         // This is a client-side action, so we can keep it local
-         // Or implement a more complex read-status system in Firebase.
+    // Read status is a client-side concern, so it remains local.
+    const markAdminMessagesAsRead = (contact) => {
          let messages = getLocal('adminMessages') || [];
          messages.forEach(m => {
             if(m.recipientContact === contact) m.read = true;
@@ -237,11 +231,19 @@ const Api = (() => {
     init();
 
     return {
-        saveProfile, getLocalProfile, getUserRole, saveUserRole,
+        // Profile
+        saveProfile, getLocalProfile, getProfile,
+        getUserRole, saveUserRole,
+        // People
         getPeople, addPerson, deletePerson,
-        getWishes, addWish, markWishAsPlayed,
-        addAdminMessage, getAdminMessages, markAdminMessagesAsRead,
+        // Wishes
+        getWishes, addWish,
+        // Admin & Requests
         saveRequest, getRequest, getAllRequests, deleteRequest,
         getAllUsers, updateUserName, deleteUserByContact,
+        // Admin Messages
+        addAdminMessage, getAdminMessages, markAdminMessagesAsRead,
     };
 })();
+
+    

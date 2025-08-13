@@ -11,10 +11,10 @@ body {
     max-width: 1400px;
     margin-left: auto;
     margin-right: auto;
-    padding: 2rem;
+    padding: 2rem 1rem; /* Adjusted padding for mobile */
 }
 
-@media (min-width: 1400px) {
+@media (min-width: 768px) {
     .container {
         padding-left: 2rem;
         padding-right: 2rem;
@@ -23,8 +23,15 @@ body {
 
 /* Page Headers & Titles */
 .page-header { margin-bottom: 2rem; }
-.page-header-title { font-size: 2.25rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.025em; }
+.page-header-title { font-size: 2rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.025em; }
 .page-header-description { color: hsl(var(--muted-foreground)); }
+
+@media (min-width: 768px) {
+    .page-header-title {
+        font-size: 2.25rem;
+    }
+}
+
 .gradient-text {
     background-image: linear-gradient(to right, hsl(var(--primary-hsl)), hsl(var(--accent-hsl)));
     -webkit-background-clip: text;

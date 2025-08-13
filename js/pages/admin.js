@@ -2,10 +2,21 @@
 const AdminPage = (() => {
     const app = document.getElementById('app');
     let allUsersCache = [];
+    let nameChangeRequestsCache = {};
+    let reRegRequestsCache = {};
 
     const init = async () => {
         renderSkeleton();
-        await loadData();
+        // Load data sequentially to ensure the API has time to fetch from Firebase first
+        allUsersCache = await Api.getAllUsers();
+        nameChangeRequestsCache = await Api.getAllRequests('nameChange');
+        reRegRequestsCache = await Api.getAllRequests('reRegistration');
+        
+        // Now that data is loaded and cached, render the full UI
+        renderNameRequests();
+        renderReRegRequests();
+        renderAllUsers();
+        bindGlobalEvents();
     };
 
     const renderSkeleton = () => {
@@ -32,7 +43,7 @@ const AdminPage = (() => {
                         <div class="card-header">
                             <div class="flex justify-between items-center">
                                 <h3 class="card-title flex items-center gap-2">
-                                    <span class="gradient-text">${UIComponents.getIcon('Users')} All Users (<span id="user-count">...</span>)</span>
+                                    <span class="gradient-text flex items-center gap-2">${UIComponents.getIcon('Users')} All Users (<span id="user-count">...</span>)</span>
                                 </h3>
                                 <button id="search-toggle-btn" class="btn btn-icon ghost">${UIComponents.getIcon('Search', {class: 'h-5 w-5'})}</button>
                             </div>
@@ -45,14 +56,6 @@ const AdminPage = (() => {
         `;
     };
 
-    const loadData = async () => {
-        allUsersCache = await Api.getAllUsers();
-        await renderNameRequests();
-        await renderReRegRequests();
-        await renderAllUsers();
-        bindGlobalEvents();
-    };
-
     const bindGlobalEvents = () => {
         document.getElementById('search-toggle-btn')?.addEventListener('click', (e) => {
             const searchContainer = document.getElementById('search-container');
@@ -63,14 +66,15 @@ const AdminPage = (() => {
         document.getElementById('search-input')?.addEventListener('input', (e) => renderAllUsers(e.target.value));
     };
 
-    const renderNameRequests = async () => {
+    const renderNameRequests = () => {
         const container = document.getElementById('name-requests-container');
-        const requests = await Api.getAllNameChangeRequests();
+        const requests = nameChangeRequestsCache;
         const pendingRequests = requests ? Object.values(requests).filter(r => r.status === 'pending') : [];
         
         if (pendingRequests.length > 0) {
             container.innerHTML = pendingRequests.map(request => `
                 <div class="space-y-4">
+                    <div><p class="text-sm text-muted-foreground">Requested by Contact</p><p class="font-semibold">${request.contact}</p></div>
                     <div><p class="text-sm text-muted-foreground">Reason</p><p class="font-semibold">${request.reason}</p></div>
                     <div><p class="text-sm text-muted-foreground">Requested New Name</p><p class="font-semibold text-primary">${request.newName}</p></div>
                     <div class="flex justify-end gap-2 pt-4">
@@ -88,9 +92,9 @@ const AdminPage = (() => {
         }
     };
 
-    const renderReRegRequests = async () => {
+    const renderReRegRequests = () => {
         const container = document.getElementById('rereg-requests-container');
-        const requests = await Api.getAllReRegRequests();
+        const requests = reRegRequestsCache;
         const pendingRequests = requests ? Object.values(requests).filter(r => r.status === 'pending') : [];
 
         if (pendingRequests.length > 0) {
@@ -138,11 +142,14 @@ const AdminPage = (() => {
     
     const bindUserRowEvents = (users, adminProfile) => {
         users.forEach(person => {
-            if (person.contact !== adminProfile.contact) {
-                document.querySelector(`.user-row[data-contact="${person.contact}"] .message-btn`)?.addEventListener('click', () => openMessageDialog(person));
-                document.querySelector(`.user-row[data-contact="${person.contact}"] .delete-btn`)?.addEventListener('click', () => handleDeleteUser(person));
+            const row = document.querySelector(`.user-row[data-contact="${person.contact}"]`);
+            if (row) {
+                if (person.role !== 'admin' && person.contact !== adminProfile.contact) {
+                    row.querySelector('.message-btn')?.addEventListener('click', () => openMessageDialog(person));
+                    row.querySelector('.delete-btn')?.addEventListener('click', () => handleDeleteUser(person));
+                }
+                row.querySelector('.avatar-trigger')?.addEventListener('click', () => UIComponents.showAvatarModal(person.avatar, person.name));
             }
-             document.querySelector(`.user-row[data-contact="${person.contact}"] .avatar-trigger`)?.addEventListener('click', () => UIComponents.showAvatarModal(person.avatar, person.name));
         });
     };
 
@@ -153,12 +160,17 @@ const AdminPage = (() => {
             if (status === 'approved') {
                 await Api.updateUserName(request.contact, request.newName);
             }
-            await Api.deleteRequest('requests/nameChange/', request.contact);
+            await Api.saveRequest('nameChange', { ...request, status }); // Save status change
+            // No, we should NOT delete the request. We should mark it as resolved. For simplicity now we save and refresh.
             
-            UICore.showToast({ title: `Request ${status}`, description: `The name change request has been updated.` });
-            await renderNameRequests();
+            // Re-fetch data to reflect changes
+            nameChangeRequestsCache = await Api.getAllRequests('nameChange');
             allUsersCache = await Api.getAllUsers();
-            await renderAllUsers();
+            
+            // Re-render components
+            renderNameRequests();
+            renderAllUsers();
+            UICore.showToast({ title: `Request ${status}`, description: `The name change request has been updated.` });
         } catch (error) {
             UICore.showToast({ title: "Error", description: "Could not update request.", variant: "destructive" });
         } finally {
@@ -173,12 +185,14 @@ const AdminPage = (() => {
             if (status === 'approved') {
                 await Api.deleteUserByContact(request.contact);
             }
-            await Api.deleteRequest('requests/reRegistration/', request.contact);
+            await Api.saveRequest('reRegistration', { ...request, status });
             
-            UICore.showToast({ title: `Request ${status}`, description: `The re-registration request has been updated.` });
-            await renderReRegRequests();
+            reRegRequestsCache = await Api.getAllRequests('reRegistration');
             allUsersCache = await Api.getAllUsers();
-            await renderAllUsers();
+
+            renderReRegRequests();
+            renderAllUsers();
+            UICore.showToast({ title: `Request ${status}`, description: `The re-registration request has been updated.` });
         } catch (error) {
             UICore.showToast({ title: "Error", description: "Could not update request.", variant: "destructive" });
         } finally {
@@ -202,9 +216,9 @@ const AdminPage = (() => {
                 UICore.setButtonLoading(confirmBtn, true, 'Deleting...');
                 try {
                     await Api.deleteUserByContact(personToDelete.contact);
-                    UICore.showToast({ title: "User Deleted", description: `${personToDelete.name} has been removed.` });
                     allUsersCache = await Api.getAllUsers();
-                    await renderAllUsers();
+                    renderAllUsers();
+                    UICore.showToast({ title: "User Deleted", description: `${personToDelete.name} has been removed.` });
                     UICore.closeModal(modalId);
                 } catch (error) {
                     UICore.showToast({ title: "Error", description: `Could not delete ${personToDelete.name}.`, variant: "destructive" });
@@ -253,7 +267,7 @@ const AdminPage = (() => {
 
     const getUserRowHTML = (person, adminProfile) => {
         if (!person) return '';
-        const isAdmin = person.role === 'admin' || (adminProfile && person.contact === adminProfile.contact);
+        const isAdmin = person.role === 'admin';
         return `
             <div class="user-row flex items-center justify-between p-2 rounded-md hover:bg-muted" data-contact="${person.contact}">
                 <div class="flex items-center gap-4">
@@ -271,7 +285,7 @@ const AdminPage = (() => {
                     </div>
                 </div>
                 <div class="flex items-center">
-                    ${!isAdmin ? `
+                    ${!isAdmin && person.contact !== adminProfile.contact ? `
                         <button class="btn btn-icon ghost message-btn" title="Send Message">${UIComponents.getIcon('MessageSquare', {class:'h-5 w-5 text-primary'})}</button>
                         <button class="btn btn-icon ghost delete-btn" title="Delete User">${UIComponents.getIcon('Trash2', {class:'h-5 w-5 text-destructive'})}</button>
                     ` : ''}

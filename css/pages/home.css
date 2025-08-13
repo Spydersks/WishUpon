@@ -13,11 +13,62 @@
 
 .wish-card { 
     background-color: hsla(0, 0%, 100%, 0.2);
-    color: hsl(var(--primary-foreground));
+    color: white;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
 }
+.wish-card .text-white { color: white !important; }
+.wish-card .text-white\/90 { color: rgba(255,255,255,0.9) !important; }
 
 .birthday-card-link:hover .card {
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+}
+
+/* Styles for the "Today's Birthday" Alert */
+.alert.bg-gradient-to-r {
+    background-image: linear-gradient(to right, hsl(var(--primary)), hsl(var(--accent)));
+    color: hsl(var(--accent-foreground));
+    border: none;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+@media(min-width: 768px) {
+    .alert.bg-gradient-to-r {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+.alert .text-accent-foreground\/90 {
+    color: hsla(var(--accent-foreground), 0.9);
+}
+
+.alert .btn.link.text-white {
+    color: white;
+}
+
+.alert .btn.link.text-white:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+#app header h1 {
+    font-size: 1.875rem;
+}
+@media (min-width: 768px) {
+     #app header h1 {
+        font-size: 2.25rem;
+    }
+}
+
+#app header .avatar {
+    width: 3rem;
+    height: 3rem;
+}
+@media (min-width: 768px) {
+    #app header .avatar {
+        width: 4rem;
+        height: 4rem;
+    }
 }

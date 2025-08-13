@@ -1,5 +1,4 @@
 /* Floating Nav */
-.floating-nav-container { position: fixed; bottom: 2rem; right: 2rem; z-index: 500; }
 .nav-toggle-btn { 
     width: 56px; 
     height: 56px; 

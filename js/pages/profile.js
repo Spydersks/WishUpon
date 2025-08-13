@@ -1,4 +1,5 @@
 
+
 const ProfilePage = (() => {
     const app = document.getElementById('app');
     let profileData = null;
@@ -7,9 +8,9 @@ const ProfilePage = (() => {
     let isAdminChecked = false;
     let maxDate = '';
 
-    const init = async (setupMode = false) => {
-        profileData = await Api.getLocalProfile();
-        isSetup = setupMode || !profileData || !profileData.name || profileData.name === 'Anonymous User';
+    const init = async () => {
+        profileData = await Api.getProfile(); // Use Firebase-first getProfile
+        isSetup = !profileData || !profileData.name || profileData.name === 'Anonymous User';
         
         if (isSetup && !profileData) {
             profileData = { name: 'Anonymous User', birthday: '', contact: '', avatar: '' };
@@ -177,13 +178,11 @@ const ProfilePage = (() => {
         window.location.reload();
     };
     
-    const handlePhotoUpdate = () => {
+    const handlePhotoUpdate = async () => {
         UICore.showPhotoTaker(async (dataUri) => {
             profileData.avatar = dataUri;
             if (!isSetup) {
                 await Api.saveProfile(profileData);
-                const qrCodeContainer = document.getElementById('qr-code-img');
-                if(qrCodeContainer) qrCodeContainer.innerHTML = `<img src="${UIComponents.getQrCodeUrl(profileData)}" alt="Your Profile QR Code" width="200" height="200" />`;
             }
             document.getElementById('avatar-wrapper').innerHTML = UIComponents.getAvatarWithFallbackHTML(profileData.avatar, profileData.name, 'w-24 h-24');
             UICore.showToast({ title: "Photo updated!", description: "Remember to save to confirm changes if in setup mode." });
@@ -213,9 +212,18 @@ const ProfilePage = (() => {
         UICore.setButtonLoading(saveBtn, true);
 
         try {
+            // Check for existing user
+            const allUsers = await Api.getAllUsers();
+            const existingUser = allUsers.find(user => user.contact === profileData.contact);
+            if(existingUser) {
+                UICore.showToast({ title: "Number Already Registered", description: "This contact number is already in use. If this is your number, please use the 'Contact Admin' button to request re-registration.", variant: "destructive" });
+                UICore.setButtonLoading(saveBtn, false, `${UIComponents.getIcon('Save', {class: 'mr-2'})}Save and Enter App`);
+                return;
+            }
+
             const finalAvatar = profileData.avatar || `https://placehold.co/128x128.png?text=${profileData.name.split(' ').map(n => n[0]).join('')}&data-ai-hint=avatar`;
             const role = isAdminChecked ? 'admin' : 'user';
-            const newProfile = { id: `user_${profileData.contact}`, ...profileData, avatar: finalAvatar };
+            const newProfile = { id: `user_${profileData.contact}`, ...profileData, avatar: finalAvatar, role: role };
 
             await Api.saveProfile(newProfile);
             Api.saveUserRole(role);
@@ -230,7 +238,7 @@ const ProfilePage = (() => {
     };
 
     const handleRequestNameChange = async () => {
-        const currentRequest = await Api.getNameChangeRequest(profileData.contact);
+        const currentRequest = await Api.getRequest('nameChange', profileData.contact);
 
         const actionHandlers = {
             onSubmit: async (newName, reason, modal, modalId) => {
@@ -241,7 +249,7 @@ const ProfilePage = (() => {
                         UICore.setButtonLoading(confirmBtn, false);
                         return UICore.showToast({ title: "Invalid Request", description: "Please provide a new, different name and a reason.", variant: "destructive" });
                      }
-                     await Api.saveNameChangeRequest({
+                     await Api.saveRequest('nameChange', {
                          contact: profileData.contact, newName, reason, status: 'pending'
                      });
                      UICore.showToast({title: "Request Sent", description: "Your name change request has been submitted."});
@@ -253,22 +261,19 @@ const ProfilePage = (() => {
                  }
             },
             onCancel: async (modal, modalId) => {
-                 await Api.deleteRequest('requests/nameChange/', profileData.contact);
+                 await Api.deleteRequest('nameChange', profileData.contact);
                  UICore.showToast({ title: "Request Cancelled"});
                  UICore.closeModal(modalId);
             },
             onCheckStatus: async (modal, modalId) => {
-                 const req = await Api.getNameChangeRequest(profileData.contact);
+                 const req = await Api.getRequest('nameChange', profileData.contact);
                  if (req && req.status === 'approved') {
                     UICore.showToast({ title: "Approved!", description: `Your name was changed to ${req.newName}.` });
-                    profileData.name = req.newName;
-                    await Api.saveProfile(profileData);
-                    await Api.deleteRequest('requests/nameChange/', profileData.contact);
-                    await init();
+                    await init(); // Re-init page to get fresh profile data
                     UICore.closeModal(modalId);
                  } else if (req && req.status === 'rejected') {
                     UICore.showToast({ title: "Request Rejected", variant: 'destructive'});
-                    await Api.deleteRequest('requests/nameChange/', profileData.contact);
+                    await Api.deleteRequest('nameChange', profileData.contact);
                     UICore.closeModal(modalId);
                  } else {
                     UICore.showToast({ title: "Still Pending", description: "Your request has not been reviewed yet." });
@@ -280,7 +285,8 @@ const ProfilePage = (() => {
     };
 
     const handleContactAdmin = async () => {
-        const currentRequest = await Api.getReRegRequest();
+        const myNumber = document.getElementById('contact')?.value;
+        const currentRequest = myNumber ? await Api.getRequest('reRegistration', myNumber) : null;
         
         const submitHandler = async (modal, modalId) => {
             const contact = modal.querySelector('#contact-admin-number').value;
@@ -294,7 +300,7 @@ const ProfilePage = (() => {
             UICore.setButtonLoading(confirmBtn, true, 'Submitting...');
             
             try {
-                await Api.saveReRegRequest({ contact, reason, status: 'pending' });
+                await Api.saveRequest('reRegistration', { contact, reason, status: 'pending' });
                 UICore.showToast({ title: "Request Sent", description: "Your re-registration request has been sent." });
                 UICore.closeModal(modalId);
             } catch(e) {
@@ -309,5 +315,3 @@ const ProfilePage = (() => {
 
     return { init };
 })();
-
-    

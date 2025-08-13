@@ -1,4 +1,5 @@
 
+
 /* People Page */
 .people-grid-container {
     display: grid;
@@ -47,9 +48,14 @@
     transition: all 0.2s;
 }
 .person-card-title {
-    font-size: 1.125rem; /* text-lg */
-    font-weight: 600; /* font-semibold */
+    font-size: 1rem; /* text-base */
 }
+@media(min-width: 640px) {
+    .person-card-title {
+        font-size: 1.125rem; /* text-lg */
+    }
+}
+
 .person-card .btn-delete-person {
     position: absolute;
     bottom: 0.5rem;
@@ -78,4 +84,24 @@
 .record-btn.is-recording .stop-icon {
     display: block;
     color: hsl(var(--destructive));
+}
+
+#people-grid + .empty-placeholder {
+    grid-column: 1 / -1;
+}
+
+#app header .btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+#app header .btn svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+@media(min-width: 768px) {
+    #app header .btn {
+        padding: 0.5rem 1rem;
+    }
 }

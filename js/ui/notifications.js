@@ -1,3 +1,4 @@
+
 const UINotifications = (() => {
 
     const renderNotificationAlert = (container) => {
@@ -20,17 +21,33 @@ const UINotifications = (() => {
     };
 
     const requestNotificationPermission = async () => {
+        // For WebView, we might call a native interface instead
+        if (window.Android && window.Android.requestNotificationPermission) {
+            window.Android.requestNotificationPermission();
+            // The native side should handle the UI feedback
+            const container = document.getElementById('notification-alert-container');
+            if (container) container.innerHTML = '';
+            return;
+        }
+
+        // Standard web flow
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-            UICore.showToast('Notifications Enabled!', 'success');
+            UICore.showToast({ title: "Notifications Enabled!", description: "You'll now get birthday reminders.", variant: "success" });
             const container = document.getElementById('notification-alert-container');
             if (container) container.innerHTML = ''; // Remove the alert
         } else if (permission === 'denied') {
-            UICore.showToast('Notifications Blocked. You can enable them in browser settings.', 'destructive');
+            UICore.showToast({ title: 'Notifications Blocked', description: 'You can enable them in browser settings if you change your mind.', variant: 'destructive' });
         }
     };
     
     const showNotification = (title, body) => {
+        // Let the native app handle notifications if it can
+        if (window.Android && window.Android.showNotification) {
+            window.Android.showNotification(title, body);
+            return;
+        }
+
         if (!('Notification' in window) || Notification.permission !== 'granted') return;
         
         const options = {

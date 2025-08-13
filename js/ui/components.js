@@ -1,4 +1,5 @@
 
+
 const UIComponents = (() => {
 
     const icons = {
@@ -9,6 +10,7 @@ const UIComponents = (() => {
         PlusCircle: `<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line>`,
         Shield: `<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>`,
         MoreVertical: `<circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle>`,
+        Menu: `<line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>`,
         X: `<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>`,
         Camera: `<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle>`,
         Save: `<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline>`,
@@ -87,7 +89,7 @@ const UIComponents = (() => {
     const getQrCodeUrl = (profile) => {
          const profileDataForQr = JSON.stringify({
           id: profile.id, name: profile.name, birthday: profile.birthday,
-          contact: profile.contact, avatar: profile.avatar
+          contact: profile.contact
       });
       return `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(profileDataForQr)}&size=200x200&bgcolor=ffffff&t=${Date.now()}`;
     };
@@ -96,28 +98,30 @@ const UIComponents = (() => {
         const navContainer = document.getElementById('floating-nav-container');
         if (!navContainer) return;
 
-        const userRole = Api.getUserRole();
         const profile = Api.getLocalProfile();
-        const isProfileSetup = profile && profile.id && profile.name !== "Anonymous User";
-    
-        if (!userRole || !isProfileSetup) {
+        const onSetupPage = window.location.hash.startsWith('#profile') && (!profile || !profile.id || profile.name === "Anonymous User");
+
+        if (onSetupPage) {
             navContainer.innerHTML = '';
             return;
         }
-    
-        const navItems = [
+
+        const userRole = Api.getUserRole();
+        const allNavItems = [
             { href: "#home", label: "Home", iconName: 'Home', roles: ['user', 'admin'] },
             { href: "#people", label: "People", iconName: 'Users', roles: ['user', 'admin'] },
             { href: "#profile", label: "Profile", iconName: 'UserCircle', roles: ['user', 'admin'] },
             { href: "#admin", label: "Admin Panel", iconName: 'Shield', roles: ['admin'] },
-        ].filter(item => item.roles.includes(userRole));
+        ];
         
+        const navItems = allNavItems.filter(item => item.roles.includes(userRole));
         const path = window.location.hash || '#home';
     
         navContainer.innerHTML = `
-            <div class="floating-nav-container">
-                <button id="nav-toggle" class="nav-toggle-btn btn btn-icon">
-                    ${getIcon('MoreVertical', {class:"w-6 h-6"})}
+            <div class="relative">
+                <button id="nav-toggle" class="nav-toggle-btn">
+                    <span class="icon-open">${getIcon('Menu', {class:"w-6 h-6"})}</span>
+                    <span class="icon-close">${getIcon('X', {class:"w-6 h-6"})}</span>
                 </button>
                 <div id="nav-menu-popover" class="nav-menu-popover hidden">
                     <ul class="nav-menu">
@@ -135,46 +139,73 @@ const UIComponents = (() => {
     
         const toggle = document.getElementById('nav-toggle');
         const menu = document.getElementById('nav-menu-popover');
+        
         if (toggle && menu) {
-            document.addEventListener('click', (e) => {
-                if (toggle.contains(e.target)) {
+            const handleToggle = (e) => {
+                const isNavToggle = toggle.contains(e.target);
+                const isMenuClick = menu.contains(e.target);
+                const isOpen = !menu.classList.contains('hidden');
+
+                if (isNavToggle) {
                     menu.classList.toggle('hidden');
-                } else if (!menu.contains(e.target)) {
+                    toggle.classList.toggle('is-open', !menu.classList.contains('hidden'));
+                } else if (isOpen && !isMenuClick) {
                     menu.classList.add('hidden');
+                    toggle.classList.remove('is-open');
                 }
-            }, true);
+            };
+            
+            document.body.addEventListener('click', handleToggle, true);
         }
     };
     
     const getPersonCardHTML = (person) => {
         const { isSameDay, getNextBirthday, differenceInDays } = UICore.dateHelpers;
-        const today = new Date(); today.setHours(0,0,0,0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         const bday = new Date(person.birthday);
         const bdayThisYear = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
 
-        let isToday = isSameDay(bdayThisYear, today);
-        let cardContainerClass = "person-card clickable";
+        let isToday = isSameDay(bdayThisYear, today, true);
+        let cardContainerClass = "person-card";
 
         if (isToday) {
             cardContainerClass += ' today';
         } else {
-            const nextBday = getNextBirthday(new Date(person.birthday));
+            const nextBday = getNextBirthday(bday);
             const daysUntil = differenceInDays(nextBday, today);
             if (daysUntil <= 3 && daysUntil > 0) {
-                 cardContainerClass += ' soon';
+                cardContainerClass += ' soon';
             }
         }
-        
+
         return `
         <div class="${cardContainerClass}" data-person-id="${person.id}">
-             <div class="person-card-inner">
-                ${isToday ? `<div class="cake-icon text-white animate-bounce">${getIcon('Cake', {size: 24, color: 'white'})}</div>` : ''}
-                <div class="avatar-trigger cursor-pointer">${getAvatarWithFallbackHTML(person.avatar, person.name, 'w-24 h-24 mx-auto mb-4')}</div>
-                <h3 class="person-card-title">${person.name}</h3>
-                <button class="btn btn-icon ghost btn-delete-person" title="Remove Connection">${getIcon('Trash2', {class:'h-4 w-4'})}</button>
+            <div class="person-card-inner">
+                ${isToday ? `<div class="cake-icon text-white animate-bounce">${getIcon('Cake', { size: 24, color: 'white' })}</div>` : ''}
+
+                <div class="absolute top-2 right-2 z-10 person-menu-container">
+                    <button class="btn btn-icon ghost h-8 w-8 rounded-full person-menu-trigger">
+                        ${getIcon('MoreVertical', { class: 'h-5 w-5 text-muted-foreground' })}
+                    </button>
+                    <div class="person-menu hidden absolute right-0 mt-2 w-48 bg-card border rounded-md shadow-lg z-20">
+                        <button class="person-wish-btn w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted flex items-center gap-2">
+                            ${getIcon('Gift', { size: 16 })} Send a Wish
+                        </button>
+                        <button class="person-delete-btn w-full text-left px-4 py-2 text-sm text-destructive hover:bg-destructive hover:text-destructive-foreground flex items-center gap-2">
+                           ${getIcon('Trash2', { size: 16 })} Remove
+                        </button>
+                    </div>
+                </div>
+
+                <div class="avatar-trigger cursor-pointer flex flex-col items-center">
+                    ${getAvatarWithFallbackHTML(person.avatar, person.name, 'w-24 h-24 mx-auto mb-4')}
+                    <h3 class="person-card-title">${person.name}</h3>
+                </div>
             </div>
         </div>`;
     };
+
     
     const showAvatarModal = (avatar, name) => {
         const content = `<img src="${avatar || `https://placehold.co/512x512.png?text=${name.split(' ').map(n=>n[0]).join('')}`}" alt="${name}" class="rounded-lg w-full h-auto">`;
@@ -242,6 +273,15 @@ const UIComponents = (() => {
             </div>`;
     };
 
+    const getQrScannerModalContentHTML = () => {
+        return `
+            <div class="py-4 space-y-4">
+                <div id="qr-reader" style="width: 100%;"></div>
+                <div id="qr-status"></div>
+            </div>
+        `;
+    };
+
     const showNameChangeModal = (profile, request, actionHandlers) => {
          const isPending = request && request.status === 'pending';
          const content = `
@@ -253,7 +293,7 @@ const UIComponents = (() => {
                 </div>
                 <div class="space-y-2">
                     <label for="requested-name" class="label">New Name</label>
-                    <input id="requested-name" class="input" value="${isPending ? request.newName : profile.name}" ${isPending ? 'disabled' : ''}>
+                    <input id="requested-name" class="input" value="${isPending ? request.newName : ''}" ${isPending ? 'disabled' : ''}>
                 </div>
                  <div class="space-y-2">
                     <label for="request-reason" class="label">Reason for Change</label>
@@ -347,7 +387,7 @@ const UIComponents = (() => {
                 </div>
             </div>`;
         UICore.showModal(
-            `<span class="flex items-center gap-2">${UIComponents.getIcon('FileText')} Terms and Conditions</span>`,
+            `<span class="flex items-center gap-2">${getIcon('FileText')} Terms and Conditions</span>`,
             content,
             'terms-modal',
             [{ id: 'close-terms', text: 'Close', variant: 'outline', closes: true }],
@@ -373,7 +413,8 @@ const UIComponents = (() => {
         showNameChangeModal,
         getLoadingSkeletonHTML,
         showTermsModal,
-        showReRegistrationModal
+        showReRegistrationModal,
+        getQrScannerModalContentHTML
     };
 
 })();

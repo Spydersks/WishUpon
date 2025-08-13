@@ -4,7 +4,8 @@ const HomePage = (() => {
     const app = document.getElementById('app');
 
     const init = async () => {
-        app.innerHTML = UIComponents.getSpinnerHTML();
+        // The main router already shows a spinner. We just need to load data
+        // and then call render() to replace the spinner with content.
         await loadData();
     };
 

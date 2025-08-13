@@ -1,14 +1,24 @@
 
+
 const PeoplePage = (() => {
 
     let mediaRecorder = null;
     let audioChunks = [];
     let recordedAudioUri = null;
     const app = document.getElementById('app');
+    let currentlyOpenMenu = null;
 
     const init = async () => {
         app.innerHTML = `<div class="container mx-auto px-4 py-8 md:py-12"><div id="people-grid">${UIComponents.getSpinnerHTML()}</div></div>`;
         await loadPeople();
+        
+        // Add a global click listener to close open menus
+        document.body.addEventListener('click', (e) => {
+            if (currentlyOpenMenu && !currentlyOpenMenu.contains(e.target)) {
+                currentlyOpenMenu.querySelector('.person-menu').classList.add('hidden');
+                currentlyOpenMenu = null;
+            }
+        });
     };
     
     const sendBirthdaysToNative = (peopleList) => {
@@ -71,20 +81,41 @@ const PeoplePage = (() => {
         document.getElementById('add-person-btn')?.addEventListener('click', handleAddPerson);
         people.forEach(person => {
             const cardElement = document.querySelector(`.person-card[data-person-id="${person.id}"]`);
-            
-            cardElement?.querySelector('.btn-delete-person')?.addEventListener('click', (e) => {
-               e.stopPropagation();
-               handleDeletePerson(person);
+            if (!cardElement) return;
+
+            const menuContainer = cardElement.querySelector('.person-menu-container');
+            const menuTrigger = menuContainer.querySelector('.person-menu-trigger');
+            const menu = menuContainer.querySelector('.person-menu');
+
+            menuTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Close any other open menu
+                if (currentlyOpenMenu && currentlyOpenMenu !== menuContainer) {
+                    currentlyOpenMenu.querySelector('.person-menu').classList.add('hidden');
+                }
+                // Toggle the current menu
+                menu.classList.toggle('hidden');
+                currentlyOpenMenu = menu.classList.contains('hidden') ? null : menuContainer;
             });
             
-            cardElement?.querySelector('.avatar-trigger')?.addEventListener('click', (e) => {
+            menu.querySelector('.person-delete-btn').addEventListener('click', (e) => {
+               e.stopPropagation();
+               handleDeletePerson(person);
+               menu.classList.add('hidden');
+               currentlyOpenMenu = null;
+            });
+
+            menu.querySelector('.person-wish-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                openWishStation(person);
+                menu.classList.add('hidden');
+                currentlyOpenMenu = null;
+            });
+            
+            cardElement.querySelector('.avatar-trigger')?.addEventListener('click', (e) => {
                e.stopPropagation();
                UIComponents.showAvatarModal(person.avatar, person.name);
             });
-
-            if (cardElement?.classList.contains('clickable')) {
-                cardElement.addEventListener('click', () => openWishStation(person));
-            }
        });
     };
 
@@ -129,12 +160,79 @@ const PeoplePage = (() => {
                     window.location.hash = 'add-person';
                     UICore.closeModal(modalId);
                 } else if (target && target.id === 'scan-qr-btn') {
-                     UICore.showToast({ title: 'Feature Not Available', description: 'QR scanning is only available in the native app version.', variant: 'default' });
+                     handleScanQrCode(modalId);
                 }
             },
             'How would you like to add a new person to your connections?',
             {isEventDelegation: true}
         );
+    };
+
+    const handleScanQrCode = (previousModalId) => {
+        UICore.closeModal(previousModalId);
+        
+        let html5QrCode;
+        const modalId = UICore.showModal(
+            `<span class="flex items-center gap-2 text-primary">${UIComponents.getIcon('QrCode', {class:'w-5 h-5'})} Scan Connection Code</span>`,
+            UIComponents.getQrScannerModalContentHTML(),
+            'qr-scanner-modal',
+            [{id: 'cancel-scan-btn', text: 'Cancel', variant: 'outline', closes: true}],
+            (modal, mId, buttonId) => {
+                if(buttonId === 'cancel-scan-btn') {
+                    if (html5QrCode && html5QrCode.isScanning) {
+                        html5QrCode.stop().catch(err => console.error("Failed to stop QR scanner:", err));
+                    }
+                }
+            },
+            'Point your camera at the QR code on your friend\'s device.'
+        );
+
+        const onScanSuccess = async (decodedText, decodedResult) => {
+            if (html5QrCode.isScanning) {
+                html5QrCode.stop().catch(err => console.log("Ignoring scanner stop error after success."));
+            }
+            UICore.closeModal(modalId);
+        
+            try {
+                const newPerson = JSON.parse(decodedText);
+                if (!newPerson.id || !newPerson.name || !newPerson.contact) {
+                    throw new Error("Invalid QR code data.");
+                }
+                
+                const myProfile = Api.getLocalProfile();
+                const existingPeople = await Api.getPeople();
+                const isDuplicate = existingPeople.some(p => p.contact === newPerson.contact) || (myProfile && myProfile.contact === newPerson.contact);
+        
+                if(isDuplicate) {
+                    return UICore.showToast({ title: "Connection Already Exists", description: `${newPerson.name} is already in your connections.`, variant: "destructive" });
+                }
+                
+                // Add a default avatar since it's not in the QR code
+                newPerson.avatar = `https://placehold.co/128x128.png?text=${newPerson.name.split(' ').map(n => n[0]).join('')}&data-ai-hint=avatar`;
+                
+                await Api.addPerson(newPerson);
+                await loadPeople();
+                UICore.showToast({ title: "Connection Added!", description: `${newPerson.name} has been added.` });
+            } catch (error) {
+                UICore.showToast({ title: "Scan Failed", description: "The QR code is not a valid connection code.", variant: "destructive" });
+            }
+        };
+
+        const onScanFailure = (error) => {
+            // This can be noisy, so we often leave it empty or log selectively.
+            // console.warn(`Code scan error = ${error}`);
+        };
+        
+        const statusElement = document.getElementById('qr-status');
+        html5QrCode = new Html5Qrcode("qr-reader");
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            onScanSuccess,
+            onScanFailure
+        ).catch(err => {
+             statusElement.innerHTML = UIComponents.getAlertHTML('Camera Error', 'Could not start the camera. Please check permissions and refresh.', 'destructive', 'Camera');
+        });
     };
 
     const openWishStation = (person) => {

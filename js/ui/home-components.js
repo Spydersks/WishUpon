@@ -8,16 +8,16 @@ const UIHomeComponents = (() => {
     const getWishCardHTML = (wish) => {
         return `
             <div class="flex gap-4 items-start wish-card p-4 rounded-lg shadow-md">
-                ${UIComponents.getAvatarWithFallbackHTML(wish.senderAvatar, wish.senderName, 'w-10 h-10 border-2 border-primary')}
+                ${UIComponents.getAvatarWithFallbackHTML(wish.senderAvatar, wish.senderName, 'w-10 h-10 border-2 border-white/50')}
                 <div class="flex-1">
                     <div class="flex justify-between items-center">
                         <div>
-                            <p class="font-bold text-primary">${wish.senderName}</p>
-                            ${wish.fromAdmin ? `<p class="text-xs text-muted-foreground -mt-1">From the WishUpon Team</p>` : ''}
+                            <p class="font-bold text-white">${wish.senderName}</p>
+                            ${wish.fromAdmin ? `<p class="text-xs text-white/90 -mt-1">From the WishUpon Team</p>` : ''}
                         </div>
-                        ${wish.audioDataUri ? `<button class="btn btn-icon ghost h-8 w-8 shrink-0 play-audio-btn" data-audio-id="${wish.id}" data-audio="${wish.audioDataUri}">${UIComponents.getIcon('PlayCircle', {class: 'text-primary h-6 w-6'})}</button>` : ''}
+                        ${wish.audioDataUri ? `<button class="btn btn-icon ghost h-8 w-8 shrink-0 play-audio-btn" data-audio-id="${wish.id}" data-audio="${wish.audioDataUri}">${UIComponents.getIcon('PlayCircle', {class: 'text-white h-6 w-6'})}</button>` : ''}
                     </div>
-                    <p class="text-sm mt-2 text-foreground/80 italic">"${wish.textMessage}"</p>
+                    <p class="text-sm mt-2 text-white/90 italic">"${wish.textMessage}"</p>
                 </div>
             </div>`;
     };
@@ -32,12 +32,12 @@ const UIHomeComponents = (() => {
                 </div>
                 
                 ${wishes.length > 0 ? `
-                    <div class="mt-6 space-y-3 bg-white/20 p-4 rounded-lg">
+                    <div class="mt-6 space-y-3">
                         <h4 class="font-bold text-center flex items-center justify-center gap-2">
                             ${UIComponents.getIcon('Gift', {size:20})}
                             You've received ${wishes.length} wish(es)!
                         </h4>
-                         <div class="h-48 overflow-y-auto pr-4 space-y-3 scroll-area">
+                         <div class="h-48 overflow-y-auto pr-2 space-y-3 scroll-area">
                             ${wishes.map(getWishCardHTML).join('')}
                         </div>
                     </div>` 
@@ -47,7 +47,7 @@ const UIHomeComponents = (() => {
     `;
     
     const getTodaysBirthdayAlertHTML = (people) => `
-        <div class="alert bg-gradient-to-r from-primary to-accent text-accent-foreground border-none z-10 flex items-center justify-between">
+        <a href="#people?wish=${people[0].id}" class="alert bg-gradient-to-r from-primary to-accent text-accent-foreground border-none z-10 flex items-center justify-between cursor-pointer hover:shadow-md transition-all">
              <div class="flex items-center">
                 ${UIComponents.getIcon('PartyPopper', {size: 24, class: 'mr-4'})}
                 <div>
@@ -55,10 +55,10 @@ const UIHomeComponents = (() => {
                     <div class="alert-description text-accent-foreground/90">Don't forget to wish a happy birthday to <span class="font-semibold">${people.map(p => p.name).join(', ')}</span>.</div>
                 </div>
              </div>
-             <a href="#people?wish=${people[0].id}" class="btn link text-white hover:text-white/80 font-bold p-0 h-auto shrink-0">
+             <div class="btn link text-white hover:text-white/80 font-bold p-0 h-auto shrink-0">
                 Send a wish now! ${UIComponents.getIcon('PartyPopper', {class: 'ml-2 h-5 w-5 animate-bounce'})}
-             </a>
-        </div>`;
+             </div>
+        </a>`;
 
     const getTomorrowsBirthdayCardHTML = (person) => {
         const birthdayDate = new Date(person.birthday);
