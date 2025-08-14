@@ -1,0 +1,54 @@
+
+body {
+    font-family: 'PT Sans', sans-serif;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 0 2rem; /* REMOVED: Vertical padding */
+}
+
+@media (min-width: 1400px) {
+    .container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
+/* Page Headers & Titles */
+.page-header { margin-bottom: 1.5rem; }
+.page-header-title { font-size: 2.25rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.025em; }
+.page-header-description { color: hsl(var(--muted-foreground)); }
+.gradient-text {
+    background-image: linear-gradient(to right, hsl(var(--primary-hsl)), hsl(var(--accent-hsl)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Scroll Area */
+.scroll-area {
+    overflow-y: auto;
+    border: 1px solid hsl(var(--border));
+    padding: 1rem;
+    border-radius: var(--radius);
+}
+.scroll-area.h-72 { max-height: 18rem; }
+.scroll-area.h-48 { max-height: 12rem; }
+
+/* Custom Scrollbar for a more polished look */
+.scroll-area::-webkit-scrollbar { width: 8px; }
+.scroll-area::-webkit-scrollbar-track { background: hsl(var(--secondary)); }
+.scroll-area::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 4px; }
+.scroll-area::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+/* Animations */
+.animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-spin { animation: spin 1s linear infinite; }
+.animate-bounce { animation: bounce 1s infinite; }

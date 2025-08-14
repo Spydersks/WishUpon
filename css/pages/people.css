@@ -1,0 +1,98 @@
+
+
+/* People Page */
+.people-grid-container {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+@media (min-width: 640px) {
+    .people-grid-container { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+    .people-grid-container { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.person-card {
+    text-align: center;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius);
+    border: 1px solid hsl(var(--border));
+}
+
+.person-card-inner {
+    background: hsl(var(--card));
+    padding: 1rem;
+    height: 100%;
+    border-radius: calc(var(--radius) - 2px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s;
+}
+
+.person-card.clickable { cursor: pointer; }
+.person-card.clickable:hover .person-card-inner {
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+}
+
+/* Today's Birthday Card - Gradient Fill */
+.person-card.today {
+    padding: 0; /* Remove padding to let inner content handle it */
+    border: none; /* Remove default border */
+    background: linear-gradient(to top right, hsl(var(--primary-hsl)), hsl(var(--accent-hsl)));
+    color: white; /* Make text readable on gradient */
+    box-shadow: 0 4px 15px -3px hsla(var(--primary-hsl), 0.4);
+}
+.person-card.today .person-card-inner {
+    background: transparent; /* Make inner transparent to show parent gradient */
+}
+.person-card.today:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -5px hsla(var(--primary-hsl), 0.5);
+}
+.person-card.today .person-card-title,
+.person-card.today .text-muted-foreground {
+    color: white;
+}
+.person-card.today .avatar {
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Soon Birthday Card - Gradient Border */
+.person-card.soon {
+    padding: 2px; /* This creates the border effect */
+    background: linear-gradient(to top right, hsl(var(--primary-hsl)), hsl(var(--accent-hsl)));
+    border: none;
+}
+
+.person-card-title {
+    font-size: 1.125rem; /* text-lg */
+    font-weight: 600; /* font-semibold */
+}
+
+.cake-icon {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 10;
+    animation: bounce 1.5s infinite;
+}
+
+.record-btn.is-recording {
+    background-color: hsl(var(--destructive) / 0.2);
+}
+.record-btn.is-recording .mic-icon {
+    display: none;
+}
+.record-btn .stop-icon {
+    display: none;
+}
+.record-btn.is-recording .stop-icon {
+    display: block;
+    color: hsl(var(--destructive));
+}
+
