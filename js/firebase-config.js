@@ -11,7 +11,7 @@ const firebaseConfig = {
 
 // --- Local Development Switch ---
 // Set this to true to force localStorage mode even with a valid config.
-const FORCE_LOCAL_MODE = false;
+const FORCE_LOCAL_MODE = true;
 
 // This function initializes Firebase and returns the database instance.
 const initializeFirebase = () => {
