@@ -83,11 +83,6 @@ const ProfilePage = (() => {
                     <p class="text-xs text-muted-foreground mt-1">This cannot be changed after setup.</p>
                 </div>
             </div>
-            <div id="login-instead" class="text-center text-sm py-2">
-                 <p>Already have an account? 
-                    <button id="login-btn" class="btn link p-0 h-auto">Log in here</button>
-                 </p>
-            </div>
             <div class="checkbox-group">
                 <input type="checkbox" id="terms-checkbox" class="checkbox">
                 <label for="terms-checkbox" class="text-sm font-normal">
@@ -138,7 +133,6 @@ const ProfilePage = (() => {
         if (isSetup) {
             document.getElementById('save-profile-btn')?.addEventListener('click', handleSaveProfileSetup);
             document.getElementById('contact-admin-btn')?.addEventListener('click', handleContactAdmin);
-            document.getElementById('login-btn')?.addEventListener('click', handleLogin);
             document.getElementById('terms-link')?.addEventListener('click', (e) => { e.preventDefault(); UIComponents.showTermsModal(); });
             const termsCheckbox = document.getElementById('terms-checkbox');
             if (termsCheckbox) {
