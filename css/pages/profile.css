@@ -1,0 +1,38 @@
+
+/* Profile & Add Person Page */
+.profile-container { max-width: 42rem; /* max-w-2xl */ }
+
+.avatar-container.group:hover .camera-btn { opacity: 1; }
+.camera-btn { 
+    position: absolute; 
+    bottom: 4px; 
+    right: 0; 
+    width: 32px; 
+    height: 32px; 
+    border-radius: 50%; 
+    background-color: hsl(var(--card)); 
+    border: 1px solid hsl(var(--border)); 
+    opacity: 0; 
+    transition: opacity 0.2s; 
+}
+.camera-btn:hover {
+    background-color: hsl(var(--muted));
+}
+
+.admin-fields-container { 
+    padding-left: 1rem; 
+    margin-left: 0.5rem; 
+    border-left: 2px solid hsl(var(--primary)); 
+}
+#qr-code-img { 
+    padding: 0.5rem; 
+    background: #fff; 
+    border-radius: var(--radius); 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+}
+#video-preview { 
+    aspect-ratio: 16/9; 
+    width: 100%; 
+    background-color: hsl(var(--muted)); 
+    border-radius: calc(var(--radius) - 2px);
+}
