@@ -1,10 +1,10 @@
 // This file will be populated with your Firebase configuration.
 const firebaseConfig = {
   apiKey: "AIzaSyCp1vdQD8R2IEs78wMXnbfJIHje02doO8I",
-  authDomain: "wishupon-73a11.firebaseapp.com",
-  databaseURL: "https://wishupon-73a11-default-rtdb.firebaseio.com",
-  projectId: "wishupon",
-  storageBucket: "wishupon-73a11.appspot.com",
+  authDomain: "blank-slate-rj6bs.firebaseapp.com",
+  databaseURL: "https://blank-slate-rj6bs-default-rtdb.firebaseio.com",
+  projectId: "blank-slate-rj6bs",
+  storageBucket: "blank-slate-rj6bs.appspot.com",
   messagingSenderId: "456747938226",
   appId: "1:456747938226:web:4fa6cf32cd511f84d674ab"
 };
