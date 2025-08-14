@@ -1,12 +1,12 @@
 // This file will be populated with your Firebase configuration.
 const firebaseConfig = {
-  apiKey: "AIzaSyCp1vdQD8R2IEs78wMXnbfJIHje02doO8I",
-  authDomain: "blank-slate-rj6bs.firebaseapp.com",
-  databaseURL: "https://blank-slate-rj6bs-default-rtdb.firebaseio.com",
-  projectId: "blank-slate-rj6bs",
-  storageBucket: "blank-slate-rj6bs.appspot.com",
-  messagingSenderId: "456747938226",
-  appId: "1:456747938226:web:4fa6cf32cd511f84d674ab"
+  apiKey: "AIzaSyBLvNLcHKXL98UK-fhtL1xtRR39cF1LNZc",
+  authDomain: "artify-m8l08.firebaseapp.com",
+  databaseURL: "https://artify-m8l08-default-rtdb.firebaseio.com",
+  projectId: "artify-m8l08",
+  storageBucket: "artify-m8l08.appspot.com",
+  messagingSenderId: "24730237560",
+  appId: "1:24730237560:web:87237a335eef1cc9a78b8d"
 };
 
 // This function initializes Firebase and returns the database instance.
